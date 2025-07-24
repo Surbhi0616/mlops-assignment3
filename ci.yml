@@ -1,0 +1,53 @@
+# .github/workflows/ci.yml
+name: MLOps CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - docker_ci # This workflow triggers only on pushes to the docker_ci branch
+
+jobs:
+  build_and_test_container:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Python environment and install dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies for training
+        run: pip install -r requirements.txt
+
+      - name: Run train.py to generate model file
+        run: python train.py
+
+      - name: Build Docker image
+        run: docker build -t surbhi046/mlops-assignment3:latest .
+        # IMPORTANT: Replace 'yourdockerhubusername' with your actual Docker Hub username.
+        # Choose a suitable image name like 'my-mlops-app'.
+
+      - name: Run Docker container and execute verification script
+        run: docker run surbhi046/mlops-assignment3:latest python predict.py
+        # IMPORTANT: Make sure the image name and Docker Hub username match the 'docker build' step above.
+
+  push_to_dockerhub:
+    needs: build_and_test_container # This job runs ONLY if the previous job (build_and_test_container) succeeds
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.surbhi046 }}
+          password: ${{ secrets.dckr_pat_llujkgHGx2hwxHX_FLf2VhX9srQ }} # These are GitHub Secrets
+
+      - name: Build and Push Docker image to Docker Hub
+        run: |
+          docker build -t surbhi046/mlops-assignment3:latest .
+          docker push surbhi046/mlops-assignment3:latest
+        # IMPORTANT: Make sure the image name and Docker Hub username here match the previous jobs.
